@@ -1,0 +1,2 @@
+This mods auto-register 2 split gamepads, and moves to the Arcade Lobby.
+Assuming the controller are then not provided with a Dash/B button, then it makes users stuck on the Arcade panel, as desired in this case.
