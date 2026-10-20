@@ -11,8 +11,7 @@ using UnityEngine;
 namespace Overcooked2_Lobby {
   
 	[BepInPlugin(PluginInfo.PLUGIN_GUID, PluginInfo.PLUGIN_NAME, PluginInfo.PLUGIN_VERSION)]
-	public class Plugin : BaseUnityPlugin
-	{
+	public class Plugin : BaseUnityPlugin {
 	    public static new ManualLogSource Logger;
 	
 	    private void Awake()

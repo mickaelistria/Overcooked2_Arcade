@@ -8,7 +8,7 @@ using System.Collections.Generic;
 namespace Overcooked2_Controller{
   
 	[BepInPlugin(PluginInfo.PLUGIN_GUID, PluginInfo.PLUGIN_NAME, PluginInfo.PLUGIN_VERSION)]
-	public class Plugin : BaseUnityPlugin {
+	public class Plugin : BaseUnityPlugin { 
 	    public static new ManualLogSource Logger;
 	
 	    private void Awake() {
@@ -49,12 +49,26 @@ namespace Overcooked2_Controller{
 			return true;
 		}
 		private static bool IsChopping(PlayerInputLookup.Player player) => player switch {
-			PlayerInputLookup.Player.One => Input.GetKey(KeyCode.C),
-			PlayerInputLookup.Player.Two => Input.GetKey(KeyCode.B),
+			PlayerInputLookup.Player.One => Input.GetKey(KeyCode.Alpha1),
+			PlayerInputLookup.Player.Two => Input.GetKey(KeyCode.Alpha2),
+			PlayerInputLookup.Player.Three => Input.GetKey(KeyCode.Alpha3),
+			PlayerInputLookup.Player.Four => Input.GetKey(KeyCode.Alpha4),
 			_ => true
 		};
-		private static bool IsUsingExtinguisher(PlayerInputLookup.Player player) => true;
-		private static bool IsWashing(PlayerInputLookup.Player player) => true;
+		private static bool IsUsingExtinguisher(PlayerInputLookup.Player player) => player switch {
+			PlayerInputLookup.Player.One => Input.GetKey(KeyCode.W),
+			PlayerInputLookup.Player.Two => Input.GetKey(KeyCode.X),
+			PlayerInputLookup.Player.Three => Input.GetKey(KeyCode.Y),
+			PlayerInputLookup.Player.Four => Input.GetKey(KeyCode.Z),
+			_ => true
+		};
+		private static bool IsWashing(PlayerInputLookup.Player player) => player switch {
+			PlayerInputLookup.Player.One => Input.GetKey(KeyCode.A),
+			PlayerInputLookup.Player.Two => Input.GetKey(KeyCode.B),
+			PlayerInputLookup.Player.Three => Input.GetKey(KeyCode.C),
+			PlayerInputLookup.Player.Four => Input.GetKey(KeyCode.D),
+			_ => true
+		};
 	}
 
 }
