@@ -1,0 +1,1 @@
+Notify the current interactable for each player over serial.
