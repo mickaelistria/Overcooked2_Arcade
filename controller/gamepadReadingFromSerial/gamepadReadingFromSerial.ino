@@ -1,6 +1,6 @@
 #include "Adafruit_TinyUSB.h"
 #define PLAYER_COUNT 4
-#define GAMEPAD_COUNT 2 // 2 split gamepads
+#define GAMEPAD_COUNT 1 // 2 split gamepads
 #if CFG_TUD_HID < GAMEPAD_COUNT
 	#error "Requires 2 HID instances support. See https://github.com/adafruit/Adafruit_TinyUSB_Arduino/commit/b75604f794acdf88daad310dd75d3a0724129056"
 #endif 
@@ -32,10 +32,11 @@ private:
 	bool threeHits(unsigned long events[]) {
 		unsigned long min = std::min(events[0], std::min(events[1], events[2]));
 		unsigned long max = std::max(events[0], std::max(events[1], events[2]));
-		Serial.print(events[0]); Serial.print(" / "); Serial.print(events[1]); Serial.print(" / "); Serial.print(events[2]); Serial.println("");
-		return min > 0 && max > 0 // three hits
+		bool res = (min > 0 && max > 0 // three hits
 			&& max - min < 1500 // in less than 1500 milliseconds
-			&& millis() - max < 200; // less than 200ms ago;
+			&& millis() - max < 200); // less than 200ms ago;
+		Serial.print(events[0]); Serial.print(" / "); Serial.print(events[1]); Serial.print(" / "); Serial.print(events[2]); Serial.print(": "); Serial.println(res ? "action" : "no action");
+		return res;
 	}
 	void insertEvent(unsigned long events[]) {
 		int indexMin = 0;
@@ -97,6 +98,14 @@ public:
 	void enableExtinguish() {
 		enableOtherActions();
 		extinguishEnabled = true;
+	}
+	void printInfos() {
+		Serial.println("<Enablement>");
+		if (chopEnabled) Serial.println("Chop enabled");
+		if (washEnabled) Serial.println("Wash enabled");
+		if (extinguishEnabled) Serial.println("Extinguish enabled");
+		Serial.println("</enablement>");
+		Serial.flush();
 	}
 	/**
 	 * @return true if state changed upon update
@@ -269,7 +278,7 @@ public:
 	}
 };
 
-Controller* controllers[GAMEPAD_COUNT] { NULL, NULL };
+Controller* controllers[GAMEPAD_COUNT] { NULL };
 
 PlayerState* players[PLAYER_COUNT] { NULL, NULL, NULL, NULL };
 void setup() {
@@ -278,15 +287,22 @@ void setup() {
 	if (!TinyUSBDevice.isInitialized()) {
 		TinyUSBDevice.begin(0);
 	}
-	PlayerState *player1State = new PlayerState(2, 3, 4, 5, 6, 7, 8, 9, 10);
+	PlayerState *player1State = new PlayerState(3, 2, 5, 4, 6, 7, 8, 8, 9); // throw and extinguish have same pin/button (8)
+	// we could consider simplifying the code but adding dedicated extinguish action is probable in a future, so let's keep it.
 	PlayerControlMapping *unsplitPlayerMapping = new PlayerControlMapping(true, GAMEPAD_BUTTON_2, GAMEPAD_BUTTON_0);
-	PlayerControlMapping *leftMapping = new PlayerControlMapping(true, GAMEPAD_BUTTON_TL2, GAMEPAD_BUTTON_4);
-	PlayerState *player2State = new PlayerState(11, 12, 13, 14, 15, 16, 17, 18, 19);
-	PlayerControlMapping *rightMapping = new PlayerControlMapping(false, GAMEPAD_BUTTON_TR2, GAMEPAD_BUTTON_5);
+
+	// Multiple controllers, and multiple players per controllers are supported. But the RP2040 doesn't have enough pins for 2 * 2 players
+	// anyway, and another RP2040 is cheaper and easier than using a multiplexer.
+	// Also, we'd like the controllers to be usable individually, so 1 RP2040 per controller seems nicer overall. But we do keep the features
+	// for multiplayer in the code as they can be useful later, for this project or another. Code is worth it.
+
+	//PlayerControlMapping *leftMapping = new PlayerControlMapping(true, GAMEPAD_BUTTON_TL2, GAMEPAD_BUTTON_4);
+	//PlayerState *player2State = new PlayerState(11, 12, 13, 14, 15, 16, 17, 18, 19);
+	//PlayerControlMapping *rightMapping = new PlayerControlMapping(false, GAMEPAD_BUTTON_TR2, GAMEPAD_BUTTON_5);
 	controllers[0] = new Controller(unsplitPlayerMapping, player1State, NULL, NULL);
-	controllers[1] = new Controller(unsplitPlayerMapping, player2State, NULL, NULL);
+	//controllers[1] = new Controller(unsplitPlayerMapping, player2State, NULL, NULL);
 	players[0] = player1State;
-	players[1] = player2State;
+	//players[1] = player2State;
 	// If already enumerated, additional class driverr begin() e.g msc, hid, midi won't take effect until re-enumeration
 	if (TinyUSBDevice.mounted()) {
 		TinyUSBDevice.detach();
@@ -301,12 +317,17 @@ PlayerState *currentlyModifiedPlayer = NULL;
 unsigned long lastPing = 0;
 void loop() {
 	if (millis() - lastPing > 5000) {
-		Serial.println("ping");
+		Serial.print("ping ");
 		lastPing = millis();
+		Serial.println(lastPing);
+		Serial.flush();
 	}
   while (Serial.available() > 0) {
     int byte = Serial.read();
-		Serial.print("received "); Serial.println(byte);
+		if (byte == ' ' || byte == '\n' || byte == '\r') {
+			break;
+		}
+		Serial.print("In: "); Serial.println((char)byte);
 		Serial.flush();
     if (byte >= '0' && byte <= '9') {
       int playerNumber = byte - '0';
@@ -315,6 +336,9 @@ void loop() {
       }
     } else if (currentlyModifiedPlayer != NULL)  {
       switch (byte) {
+				case '?':
+					currentlyModifiedPlayer->printInfos();
+					break;
         case 'C': // chop
           currentlyModifiedPlayer->enableChop();
 					break;
